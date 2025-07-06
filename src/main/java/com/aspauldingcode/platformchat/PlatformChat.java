@@ -11,9 +11,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.geysermc.floodgate.api.FloodgateApi;
 
-// EaglerXBackendRPC API imports
+// EaglerXBackendRPC imports
 import net.lax1dude.eaglercraft.backend.rpc.api.bukkit.EaglerXBackendRPC;
 import net.lax1dude.eaglercraft.backend.rpc.api.IEaglerXBackendRPC;
+import net.lax1dude.eaglercraft.backend.rpc.api.IPlayerRPC;
+import net.lax1dude.eaglercraft.backend.rpc.api.IEaglerPlayerRPC;
 
 public class PlatformChat extends JavaPlugin implements Listener {
     
@@ -25,25 +27,27 @@ public class PlatformChat extends JavaPlugin implements Listener {
     public void onEnable() {
         saveDefaultConfig();
         FileConfiguration config = getConfig();
-        
         usePlaceholderAPI = config.getBoolean("use-placeholderapi", false);
-        useEaglerXBackendRPC = config.getBoolean("use-eaglerxbackendrpc", true);
         
-        // Initialize EaglerXBackendRPC API if available
-        if (useEaglerXBackendRPC) {
-            try {
-                eaglerAPI = EaglerXBackendRPC.instance();
-                getLogger().info("EaglerXBackendRPC API initialized successfully");
-            } catch (Exception e) {
-                getLogger().warning("Failed to initialize EaglerXBackendRPC API: " + e.getMessage());
-                useEaglerXBackendRPC = false;
-            }
-        }
+        // Check if EaglerXBackendRPC is available
+        useEaglerXBackendRPC = checkEaglerXBackendRPC();
         
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("PlatformChat enabled" + 
             (usePlaceholderAPI ? " with PlaceholderAPI support" : "") +
             (useEaglerXBackendRPC ? " with EaglerXBackendRPC support" : "") + ".");
+    }
+    
+    private boolean checkEaglerXBackendRPC() {
+        try {
+            if (Bukkit.getPluginManager().isPluginEnabled("EaglercraftXBackendRPC")) {
+                eaglerAPI = EaglerXBackendRPC.instance();
+                return true;
+            }
+        } catch (Exception e) {
+            getLogger().warning("EaglerXBackendRPC not available: " + e.getMessage());
+        }
+        return false;
     }
     
     @EventHandler
@@ -52,11 +56,11 @@ public class PlatformChat extends JavaPlugin implements Listener {
         String message = event.getMessage();
         FileConfiguration config = getConfig();
         
-        // Determine player platform
-        String platformType = determinePlatform(player);
-        String format = getFormatForPlatform(platformType, config);
+        // Determine platform
+        String platform = determinePlatform(player);
+        String format = getFormatForPlatform(platform, config);
         
-        // Apply prefix if configured
+        // Add prefix if configured
         String prefix = config.getString("prefix", "");
         if (prefix != null && !prefix.isEmpty()) {
             format = prefix + format;
@@ -70,114 +74,84 @@ public class PlatformChat extends JavaPlugin implements Listener {
         // Replace placeholders
         format = format.replace("%player_name%", player.getName())
                       .replace("%message%", message)
-                      .replace("%platform%", platformType);
+                      .replace("%platform%", platform);
         
         // Apply color codes
         format = ChatColor.translateAlternateColorCodes('&', format);
         
-        // Cancel original event and broadcast custom format
+        // Cancel original event and broadcast formatted message
         event.setCancelled(true);
         Bukkit.getServer().broadcastMessage(format);
     }
     
     private String determinePlatform(Player player) {
-        // Check if player is from Bedrock (Floodgate)
-        if (FloodgateApi.getInstance().isFloodgatePlayer(player.getUniqueId())) {
-            return "bedrock";
-        }
-        
-        // Check if player is from Eaglercraft (EaglerXBackendRPC)
-        if (useEaglerXBackendRPC && eaglerAPI != null) {
-            try {
-                if (eaglerAPI.isEaglerPlayer(player)) {
-                    // This is an Eaglercraft player
-                    return getEaglerPlatformInfo(player);
-                }
-            } catch (Exception e) {
-                getLogger().warning("Error checking Eaglercraft player status: " + e.getMessage());
-            }
-        }
-        
-        // Check protocol version for regular Java players
-        // You might need to implement getMinecraftProtocol() based on your server setup
-        int protocol = getMinecraftProtocol(player);
-        return getJavaVersionFromProtocol(protocol);
-    }
-    
-    private String getEaglerPlatformInfo(Player player) {
+        // Check for Bedrock first (via Floodgate)
         try {
-            // Check if this is a rewind player (1.5.2)
-            if (eaglerAPI.isRewindPlayer(player)) {
-                return "eaglercraft-1.5.2";
-            }
-            
-            // For non-rewind players, try to get version info
-            int protocol = eaglerAPI.getEaglerProtocol(player);
-            switch (protocol) {
-                case 47:
-                    return "eaglercraft-1.8";
-                case 335:
-                    return "eaglercraft-1.12.2";
-                default:
-                    return "eaglercraft";
+            if (FloodgateApi.getInstance().isFloodgatePlayer(player.getUniqueId())) {
+                return "Bedrock";
             }
         } catch (Exception e) {
-            getLogger().warning("Error determining Eaglercraft version: " + e.getMessage());
-            return "eaglercraft";
+            // Floodgate not available or error - continue checking
+        }
+        
+        // Check for Eaglercraft if EaglerXBackendRPC is available
+        if (useEaglerXBackendRPC && eaglerAPI != null) {
+            try {
+                IPlayerRPC playerRPC = eaglerAPI.getPlayer(player);
+                if (playerRPC != null) {
+                    // Check if this is an Eagler player
+                    if (playerRPC.isEaglerPlayer()) {
+                        IEaglerPlayerRPC eaglerPlayer = playerRPC.asEaglerPlayer();
+                        
+                        if (eaglerPlayer.isEaglerXRewindPlayer()) {
+                            // This is Eaglercraft 1.5.2 (rewind)
+                            int rewindVersion = eaglerPlayer.getRewindProtocolVersion();
+                            return "Eaglercraft 1.5.2 (v" + rewindVersion + ")";
+                        } else {
+                            // This is regular Eaglercraft, check protocol version
+                            int protocol = eaglerPlayer.getMinecraftProtocol();
+                            return getEaglerVersionFromProtocol(protocol);
+                        }
+                    }
+                }
+            } catch (NoSuchMethodError e) {
+                getLogger().warning("EaglerXBackendRPC API method not found: " + e.getMessage());
+                getLogger().warning("You may need to update your EaglerXBackendRPC plugin version");
+            } catch (Exception e) {
+                getLogger().warning("Error checking Eaglercraft status: " + e.getMessage());
+            }
+        }
+        
+        // Default to Java
+        return "Java";
+    }
+    
+    private String getEaglerVersionFromProtocol(int protocol) {
+        // Map protocol versions to Minecraft versions for Eaglercraft
+        switch (protocol) {
+            case 47:
+                return "Eaglercraft 1.8";
+            case 335:
+                return "Eaglercraft 1.12.2";
+            default:
+                return "Eaglercraft (Unknown)";
         }
     }
     
     private String getFormatForPlatform(String platform, FileConfiguration config) {
-        switch (platform.toLowerCase()) {
-            case "bedrock":
+        switch (platform) {
+            case "Bedrock":
                 return config.getString("bedrock-format", "&b[Bedrock] &a%player_name%&f: %message%");
-            case "eaglercraft":
-                return config.getString("eaglercraft-format", "&6[Eaglercraft] &a%player_name%&f: %message%");
-            case "eaglercraft-1.5.2":
-                return config.getString("eaglercraft-1.5.2-format", "&6[Eaglercraft 1.5.2] &a%player_name%&f: %message%");
-            case "eaglercraft-1.8":
-                return config.getString("eaglercraft-1.8-format", "&6[Eaglercraft 1.8] &a%player_name%&f: %message%");
-            case "eaglercraft-1.12.2":
-                return config.getString("eaglercraft-1.12.2-format", "&6[Eaglercraft 1.12.2] &a%player_name%&f: %message%");
-            case "java-1.8":
-                return config.getString("java-1.8-format", "&7[Java 1.8] &a%player_name%&f: %message%");
-            case "java-1.12.2":
-                return config.getString("java-1.12.2-format", "&7[Java 1.12.2] &a%player_name%&f: %message%");
+            case "Eaglercraft 1.5.2":
+                return config.getString("eaglercraft-1.5.2-format", "&e[Eaglercraft 1.5.2] &a%player_name%&f: %message%");
+            case "Eaglercraft 1.8":
+                return config.getString("eaglercraft-1.8-format", "&e[Eaglercraft 1.8] &a%player_name%&f: %message%");
+            case "Eaglercraft 1.12.2":
+                return config.getString("eaglercraft-1.12.2-format", "&e[Eaglercraft 1.12.2] &a%player_name%&f: %message%");
+            case "Eaglercraft (Unknown)":
+                return config.getString("eaglercraft-unknown-format", "&e[Eaglercraft] &a%player_name%&f: %message%");
             default:
                 return config.getString("java-format", "&7[Java] &a%player_name%&f: %message%");
         }
-    }
-    
-    private String getJavaVersionFromProtocol(int protocol) {
-        switch (protocol) {
-            case 47:
-                return "java-1.8";
-            case 335:
-                return "java-1.12.2";
-            // Add more protocol versions as needed
-            default:
-                return "java";
-        }
-    }
-    
-    private int getMinecraftProtocol(Player player) {
-        // For regular Java players, you can try to get the protocol version
-        // This implementation depends on your server version and available methods
-        try {
-            // For Paper/Spigot servers, you might be able to access this:
-            // return player.getProtocolVersion(); // if available
-            
-            // Alternative approach using reflection (server-version dependent)
-            // This is a simplified example - you'd need to implement based on your server
-            return 47; // Default to 1.8 protocol for now
-        } catch (Exception e) {
-            getLogger().warning("Could not determine protocol version for player: " + player.getName());
-            return 47; // Default fallback
-        }
-    }
-    
-    @Override
-    public void onDisable() {
-        getLogger().info("PlatformChat disabled.");
     }
 }
