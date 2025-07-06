@@ -1,0 +1,29 @@
+# PlatformChat Configuration
+# This plugin bridges chat across platforms and supports PlaceholderAPI, GeyserMC, and Floodgate.
+
+# Format for messages from Java players
+java-format: "<gray>[Java]</gray> <green>%player_name%</green>: <white>%message%"
+
+# Format for messages from Bedrock players (via Geyser/Floodgate)
+bedrock-format: "<aqua>[Bedrock]</aqua> <green>%player_name%</green>: <white>%message%"
+
+# Enable PlaceholderAPI integration
+use-placeholderapi: true
+
+# Prefix shown before messages (set to "" to disable)
+prefix: "<gold>[PlatformChat]</gold> "
+
+# Should commands like /me or /say also use the PlatformChat formatting?
+format-server-commands: true
+
+# Optional: Filter out plugin spam (join/leave/death messages, etc.)
+suppress-plugin-messages: false
+
+# Permissions
+permissions:
+  send: platformchat.send
+  reload: platformchat.reload
+
+# Debug mode
+debug: false
+
