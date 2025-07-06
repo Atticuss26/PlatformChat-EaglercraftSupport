@@ -2,12 +2,11 @@ name: PlatformChat
 version: 1.1.0
 main: com.aspaulding.platformchat.PlatformChat
 api-version: 1.19
-author: aspaulding
-description: A plugin that shows player platforms (Java, Bedrock, Eaglercraft) in chat
+author: YourName
+description: A plugin that shows player platforms in chat
 
-depend:
-  - floodgate
-
+# Optional dependencies
 softdepend:
   - PlaceholderAPI
+  - floodgate
   - EaglerXBackendRPC
