@@ -8,8 +8,30 @@
   <artifactId>platformchat</artifactId>
   <version>1.0</version>
   <packaging>jar</packaging>
-
   <name>PlatformChat</name>
+  <description>A simple Bukkit plugin that formats chat for Java and Bedrock players.</description>
+  <url>https://github.com/aspauldingcode/PlatformChat</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>aspauldingcode</id>
+      <name>Alex Spaulding</name>
+      <url>https://github.com/aspauldingcode</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <url>https://github.com/aspauldingcode/PlatformChat</url>
+    <connection>scm:git:git://github.com/aspauldingcode/PlatformChat.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com:aspauldingcode/PlatformChat.git</developerConnection>
+  </scm>
 
   <dependencies>
     <!-- Spigot API -->
@@ -38,23 +60,27 @@
   </dependencies>
 
   <repositories>
-    <!-- Spigot -->
     <repository>
       <id>spigot-repo</id>
       <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
     </repository>
-
-    <!-- PlaceholderAPI -->
     <repository>
       <id>placeholderapi</id>
       <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
     </repository>
-
-    <!-- Floodgate (OpenCollab) -->
     <repository>
       <id>opencollab-snapshots</id>
       <url>https://repo.opencollab.dev/main/</url>
     </repository>
   </repositories>
+
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub Packages</name>
+      <url>https://maven.pkg.github.com/aspauldingcode/PlatformChat</url>
+    </repository>
+  </distributionManagement>
+
 </project>
 
