@@ -11,48 +11,39 @@ import org.bukkit.plugin.java.JavaPlugin;
 import me.clip.placeholderapi.PlaceholderAPI;
 import org.geysermc.floodgate.api.FloodgateApi;
 
-// EaglerX Backend RPC imports (backend API)
-import net.lax1dude.eaglercraft.backend.server.api.IEaglerXServerAPI;
-import net.lax1dude.eaglercraft.backend.server.api.IEaglerPlayer;
+// EaglerXBackendRPC API imports
+import net.lax1dude.eaglercraft.backend.rpc.api.bukkit.EaglerXBackendRPC;
+import net.lax1dude.eaglercraft.backend.rpc.api.IEaglerXBackendRPC;
 
 public class PlatformChat extends JavaPlugin implements Listener {
+    
     private boolean usePlaceholderAPI;
-    private boolean useEaglerXBackend;
-    private IEaglerXServerAPI<?> eaglerAPI;
+    private boolean useEaglerXBackendRPC;
+    private IEaglerXBackendRPC<Player> eaglerAPI;
     
     @Override
     public void onEnable() {
         saveDefaultConfig();
         FileConfiguration config = getConfig();
-        usePlaceholderAPI = config.getBoolean("use-placeholderapi", false);
-        useEaglerXBackend = config.getBoolean("use-eaglerx-backend", true);
         
-        // Try to initialize EaglerX Backend RPC support
-        if (useEaglerXBackend) {
+        usePlaceholderAPI = config.getBoolean("use-placeholderapi", false);
+        useEaglerXBackendRPC = config.getBoolean("use-eaglerxbackendrpc", true);
+        
+        // Initialize EaglerXBackendRPC API if available
+        if (useEaglerXBackendRPC) {
             try {
-                // Check if EaglerX Backend API is available
-                Class.forName("net.lax1dude.eaglercraft.backend.server.api.IEaglerXServerAPI");
-                // Get the EaglerX server API instance from the backend RPC
-                eaglerAPI = getEaglerXBackendAPI();
-                if (eaglerAPI != null) {
-                    getLogger().info("EaglerX Backend API support enabled.");
-                } else {
-                    useEaglerXBackend = false;
-                    getLogger().warning("EaglerX Backend API not available, disabling Eaglercraft support.");
-                }
-            } catch (ClassNotFoundException e) {
-                useEaglerXBackend = false;
-                getLogger().warning("EaglerX Backend API not found, disabling Eaglercraft support.");
+                eaglerAPI = EaglerXBackendRPC.instance();
+                getLogger().info("EaglerXBackendRPC API initialized successfully");
             } catch (Exception e) {
-                useEaglerXBackend = false;
-                getLogger().warning("Failed to initialize EaglerX Backend API support: " + e.getMessage());
+                getLogger().warning("Failed to initialize EaglerXBackendRPC API: " + e.getMessage());
+                useEaglerXBackendRPC = false;
             }
         }
         
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("PlatformChat enabled" + 
             (usePlaceholderAPI ? " with PlaceholderAPI support" : "") +
-            (useEaglerXBackend ? " and EaglerX Backend support." : "."));
+            (useEaglerXBackendRPC ? " with EaglerXBackendRPC support" : "") + ".");
     }
     
     @EventHandler
@@ -62,10 +53,8 @@ public class PlatformChat extends JavaPlugin implements Listener {
         FileConfiguration config = getConfig();
         
         // Determine player platform
-        PlayerPlatform platform = determinePlayerPlatform(player);
-        
-        // Get appropriate format based on platform
-        String format = getFormatForPlatform(platform, config);
+        String platformType = determinePlatform(player);
+        String format = getFormatForPlatform(platformType, config);
         
         // Apply prefix if configured
         String prefix = config.getString("prefix", "");
@@ -80,7 +69,8 @@ public class PlatformChat extends JavaPlugin implements Listener {
         
         // Replace placeholders
         format = format.replace("%player_name%", player.getName())
-                       .replace("%message%", message);
+                      .replace("%message%", message)
+                      .replace("%platform%", platformType);
         
         // Apply color codes
         format = ChatColor.translateAlternateColorCodes('&', format);
@@ -90,114 +80,104 @@ public class PlatformChat extends JavaPlugin implements Listener {
         Bukkit.getServer().broadcastMessage(format);
     }
     
-    private PlayerPlatform determinePlayerPlatform(Player player) {
-        // Check for Bedrock first (Floodgate)
+    private String determinePlatform(Player player) {
+        // Check if player is from Bedrock (Floodgate)
         if (FloodgateApi.getInstance().isFloodgatePlayer(player.getUniqueId())) {
-            return PlayerPlatform.BEDROCK;
+            return "bedrock";
         }
         
-        // Check for Eaglercraft (EaglerX Backend API)
-        if (useEaglerXBackend && eaglerAPI != null) {
+        // Check if player is from Eaglercraft (EaglerXBackendRPC)
+        if (useEaglerXBackendRPC && eaglerAPI != null) {
             try {
-                // Get the Eaglercraft player object
-                IEaglerPlayer<?> eaglerPlayer = eaglerAPI.getPlayer(player.getUniqueId());
-                if (eaglerPlayer != null && eaglerPlayer.isEaglerPlayer()) {
-                    
-                    // Check if it's a rewind player (1.5.2 via EaglerXRewind)
-                    if (isRewindPlayer(eaglerPlayer)) {
-                        return PlayerPlatform.EAGLERCRAFT_1_5_2;
-                    } else {
-                        // For non-rewind Eaglercraft players, get the protocol version
-                        int protocolVersion = eaglerPlayer.getMinecraftProtocol();
-                        return determineEaglercraftVersion(protocolVersion);
-                    }
+                if (eaglerAPI.isEaglerPlayer(player)) {
+                    // This is an Eaglercraft player
+                    return getEaglerPlatformInfo(player);
                 }
             } catch (Exception e) {
                 getLogger().warning("Error checking Eaglercraft player status: " + e.getMessage());
             }
         }
         
-        // Default to Java Edition
-        return PlayerPlatform.JAVA;
+        // Check protocol version for regular Java players
+        // You might need to implement getMinecraftProtocol() based on your server setup
+        int protocol = getMinecraftProtocol(player);
+        return getJavaVersionFromProtocol(protocol);
     }
     
-    private boolean isRewindPlayer(IEaglerPlayer<?> eaglerPlayer) {
+    private String getEaglerPlatformInfo(Player player) {
         try {
-            // Check if the player has a rewind protocol attachment
-            // This checks if the player is using EaglerXRewind (1.5.2)
-            Object rewindAttachment = eaglerPlayer.getRewindAttachment();
-            return rewindAttachment != null;
+            // Check if this is a rewind player (1.5.2)
+            if (eaglerAPI.isRewindPlayer(player)) {
+                return "eaglercraft-1.5.2";
+            }
+            
+            // For non-rewind players, try to get version info
+            int protocol = eaglerAPI.getEaglerProtocol(player);
+            switch (protocol) {
+                case 47:
+                    return "eaglercraft-1.8";
+                case 335:
+                    return "eaglercraft-1.12.2";
+                default:
+                    return "eaglercraft";
+            }
         } catch (Exception e) {
-            // If method doesn't exist or fails, assume not a rewind player
-            return false;
+            getLogger().warning("Error determining Eaglercraft version: " + e.getMessage());
+            return "eaglercraft";
         }
     }
     
-    private PlayerPlatform determineEaglercraftVersion(int protocolVersion) {
-        // Map protocol versions to Eaglercraft versions
-        // Based on your description: regular EaglerX can support 1.8 and 1.12.2
-        switch (protocolVersion) {
-            case 47:
-                return PlayerPlatform.EAGLERCRAFT_1_8;
-            case 335:
-            case 338:
-            case 340:
-                return PlayerPlatform.EAGLERCRAFT_1_12_2;
-            default:
-                // Log unknown protocol version for debugging
-                getLogger().info("Unknown Eaglercraft protocol version: " + protocolVersion);
-                return PlayerPlatform.EAGLERCRAFT_UNKNOWN;
-        }
-    }
-    
-    private String getFormatForPlatform(PlayerPlatform platform, FileConfiguration config) {
-        switch (platform) {
-            case BEDROCK:
+    private String getFormatForPlatform(String platform, FileConfiguration config) {
+        switch (platform.toLowerCase()) {
+            case "bedrock":
                 return config.getString("bedrock-format", "&b[Bedrock] &a%player_name%&f: %message%");
-            case EAGLERCRAFT_1_5_2:
-                return config.getString("eaglercraft-1.5.2-format", "&e[Eaglercraft 1.5.2] &a%player_name%&f: %message%");
-            case EAGLERCRAFT_1_8:
-                return config.getString("eaglercraft-1.8-format", "&e[Eaglercraft 1.8] &a%player_name%&f: %message%");
-            case EAGLERCRAFT_1_12_2:
-                return config.getString("eaglercraft-1.12.2-format", "&e[Eaglercraft 1.12.2] &a%player_name%&f: %message%");
-            case EAGLERCRAFT_UNKNOWN:
-                return config.getString("eaglercraft-format", "&e[Eaglercraft] &a%player_name%&f: %message%");
-            case JAVA:
+            case "eaglercraft":
+                return config.getString("eaglercraft-format", "&6[Eaglercraft] &a%player_name%&f: %message%");
+            case "eaglercraft-1.5.2":
+                return config.getString("eaglercraft-1.5.2-format", "&6[Eaglercraft 1.5.2] &a%player_name%&f: %message%");
+            case "eaglercraft-1.8":
+                return config.getString("eaglercraft-1.8-format", "&6[Eaglercraft 1.8] &a%player_name%&f: %message%");
+            case "eaglercraft-1.12.2":
+                return config.getString("eaglercraft-1.12.2-format", "&6[Eaglercraft 1.12.2] &a%player_name%&f: %message%");
+            case "java-1.8":
+                return config.getString("java-1.8-format", "&7[Java 1.8] &a%player_name%&f: %message%");
+            case "java-1.12.2":
+                return config.getString("java-1.12.2-format", "&7[Java 1.12.2] &a%player_name%&f: %message%");
             default:
                 return config.getString("java-format", "&7[Java] &a%player_name%&f: %message%");
         }
     }
     
-    // Get the EaglerX Backend API instance
-    // This depends on how the backend RPC is set up
-    private IEaglerXServerAPI<?> getEaglerXBackendAPI() {
-        try {
-            // The backend API should be available as a service or singleton
-            // This might be something like:
-            // return EaglerXBackendRPC.getServerAPI();
-            // or
-            // return EaglerXBackend.getInstance().getServerAPI();
-            
-            // For now, return null - you'll need to implement this based on
-            // how your EaglerX Backend RPC is configured
-            
-            // Example implementation (adjust based on your setup):
-            Class<?> backendClass = Class.forName("net.lax1dude.eaglercraft.backend.EaglerXBackend");
-            Object backendInstance = backendClass.getMethod("getInstance").invoke(null);
-            return (IEaglerXServerAPI<?>) backendClass.getMethod("getServerAPI").invoke(backendInstance);
-            
-        } catch (Exception e) {
-            getLogger().warning("Failed to get EaglerX Backend API: " + e.getMessage());
-            return null;
+    private String getJavaVersionFromProtocol(int protocol) {
+        switch (protocol) {
+            case 47:
+                return "java-1.8";
+            case 335:
+                return "java-1.12.2";
+            // Add more protocol versions as needed
+            default:
+                return "java";
         }
     }
     
-    private enum PlayerPlatform {
-        JAVA,
-        BEDROCK,
-        EAGLERCRAFT_1_5_2,    // EaglerXRewind only
-        EAGLERCRAFT_1_8,      // Regular EaglerX
-        EAGLERCRAFT_1_12_2,   // Regular EaglerX
-        EAGLERCRAFT_UNKNOWN   // Unknown Eaglercraft version
+    private int getMinecraftProtocol(Player player) {
+        // For regular Java players, you can try to get the protocol version
+        // This implementation depends on your server version and available methods
+        try {
+            // For Paper/Spigot servers, you might be able to access this:
+            // return player.getProtocolVersion(); // if available
+            
+            // Alternative approach using reflection (server-version dependent)
+            // This is a simplified example - you'd need to implement based on your server
+            return 47; // Default to 1.8 protocol for now
+        } catch (Exception e) {
+            getLogger().warning("Could not determine protocol version for player: " + player.getName());
+            return 47; // Default fallback
+        }
+    }
+    
+    @Override
+    public void onDisable() {
+        getLogger().info("PlatformChat disabled.");
     }
 }
