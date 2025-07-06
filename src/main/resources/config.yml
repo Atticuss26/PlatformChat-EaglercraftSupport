@@ -1,31 +1,37 @@
 # PlatformChat Configuration
-# Enable PlaceholderAPI support (requires PlaceholderAPI plugin)
+# Use PlaceholderAPI for placeholder support (requires PlaceholderAPI plugin)
 use-placeholderapi: false
 
-# Enable EaglerX Backend API support for Eaglercraft detection
-use-eaglerx-backend: true
+# Use EaglerXBackendRPC API for Eaglercraft detection (requires EaglerXBackendRPC plugin)
+use-eaglerxbackendrpc: true
 
-# Prefix to add before all chat messages (optional)
+# Global prefix for all messages (optional)
 prefix: ""
 
 # Chat formats for different platforms
-# Available placeholders: %player_name%, %message%
-# Color codes: Use & for color codes (e.g., &a for green, &b for aqua)
+# Available placeholders: %player_name%, %message%, %platform%
+# Use & for color codes
 
-# Java Edition format
-java-format: "&7[Java] &a%player_name%&f: %message%"
-
-# Bedrock Edition format (via Floodgate)
+# Bedrock Edition players (via Floodgate)
 bedrock-format: "&b[Bedrock] &a%player_name%&f: %message%"
 
-# Eaglercraft 1.5.2 format (via EaglerXRewind)
-eaglercraft-1.5.2-format: "&e[Eaglercraft 1.5.2] &a%player_name%&f: %message%"
+# Java Edition players (default)
+java-format: "&7[Java] &a%player_name%&f: %message%"
 
-# Eaglercraft 1.8 format (via regular EaglerX)
-eaglercraft-1.8-format: "&e[Eaglercraft 1.8] &a%player_name%&f: %message%"
+# Java Edition 1.8 players
+java-1.8-format: "&7[Java 1.8] &a%player_name%&f: %message%"
 
-# Eaglercraft 1.12.2 format (via regular EaglerX)
-eaglercraft-1.12.2-format: "&e[Eaglercraft 1.12.2] &a%player_name%&f: %message%"
+# Java Edition 1.12.2 players
+java-1.12.2-format: "&7[Java 1.12.2] &a%player_name%&f: %message%"
 
-# Generic Eaglercraft format (for unknown versions)
-eaglercraft-format: "&e[Eaglercraft] &a%player_name%&f: %message%"
+# Eaglercraft players (general)
+eaglercraft-format: "&6[Eaglercraft] &a%player_name%&f: %message%"
+
+# Eaglercraft 1.5.2 players (via EaglerXRewind)
+eaglercraft-1.5.2-format: "&6[Eaglercraft 1.5.2] &a%player_name%&f: %message%"
+
+# Eaglercraft 1.8 players
+eaglercraft-1.8-format: "&6[Eaglercraft 1.8] &a%player_name%&f: %message%"
+
+# Eaglercraft 1.12.2 players
+eaglercraft-1.12.2-format: "&6[Eaglercraft 1.12.2] &a%player_name%&f: %message%"
