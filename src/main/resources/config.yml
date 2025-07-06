@@ -1,11 +1,17 @@
 # PlatformChat Configuration
-# This plugin bridges chat across platforms and supports PlaceholderAPI, GeyserMC, and Floodgate.
+# This plugin bridges chat across platforms and supports PlaceholderAPI, GeyserMC, Floodgate, and EaglerXBackendRPC.
 
 # Format for messages from Java players
 java-format: "&7[Java] &a%player_name%&f: &f%message%"
 
 # Format for messages from Bedrock players (via Geyser/Floodgate)
 bedrock-format: "&b[Bedrock] &a%player_name% &e%floodgate_device%: &f%message%"
+
+# Format for messages from Eaglercraft players
+eaglercraft-1.5.2-format: "&e[Eaglercraft 1.5.2] &a%player_name%&f: &f%message%"
+eaglercraft-1.8-format: "&e[Eaglercraft 1.8] &a%player_name%&f: &f%message%"
+eaglercraft-1.12.2-format: "&e[Eaglercraft 1.12.2] &a%player_name%&f: &f%message%"
+eaglercraft-unknown-format: "&e[Eaglercraft] &a%player_name%&f: &f%message%"
 
 # Enable PlaceholderAPI integration
 use-placeholderapi: true
@@ -27,3 +33,9 @@ permissions:
 # Debug mode
 debug: false
 
+# Available placeholders:
+# %player_name% - Player's name
+# %message% - Chat message
+# %platform% - Detected platform
+# %floodgate_device% - Device type for Bedrock players (if floodgate is available)
+# Plus any PlaceholderAPI placeholders if enabled
