@@ -22,6 +22,10 @@ PlatformChat is a simple Minecraft Bukkit/Spigot plugin that provides enhanced c
 
 ---
 
+## Motivation
+
+I wanted to use the FloodgatePlaceholder plugin for a Paper server, but I didn’t want to rely on large, feature-heavy plugins like EssentialsX just to handle placeholders. My goal was to have a minimal plugin focused solely on interacting with placeholders in a simple and efficient way. PlatformChat is designed specifically to detect the platform and device each player joins with and customize how player information is displayed in chat messages to keep things lightweight and focused.
+
 ## Requirements
 
 - Java 17+ (matches your server's Java version)
