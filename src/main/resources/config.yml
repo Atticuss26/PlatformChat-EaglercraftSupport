@@ -1,29 +1,31 @@
 # PlatformChat Configuration
-# This plugin bridges chat across platforms and supports PlaceholderAPI, GeyserMC, and Floodgate.
+# Enable PlaceholderAPI support (requires PlaceholderAPI plugin)
+use-placeholderapi: false
 
-# Format for messages from Java players
-java-format: "&7[Java] &a%player_name%&f: &f%message%"
+# Enable EaglerX Backend API support for Eaglercraft detection
+use-eaglerx-backend: true
 
-# Format for messages from Bedrock players (via Geyser/Floodgate)
-bedrock-format: "&b[Bedrock] &a%player_name% &e%floodgate_device%: &f%message%"
+# Prefix to add before all chat messages (optional)
+prefix: ""
 
-# Enable PlaceholderAPI integration
-use-placeholderapi: true
+# Chat formats for different platforms
+# Available placeholders: %player_name%, %message%
+# Color codes: Use & for color codes (e.g., &a for green, &b for aqua)
 
-# Prefix shown before messages (set to "" to disable)
-prefix: "&6[PlatformChat]&r "
+# Java Edition format
+java-format: "&7[Java] &a%player_name%&f: %message%"
 
-# Should commands like /me or /say also use the PlatformChat formatting?
-format-server-commands: true
+# Bedrock Edition format (via Floodgate)
+bedrock-format: "&b[Bedrock] &a%player_name%&f: %message%"
 
-# Optional: Filter out plugin spam (join/leave/death messages, etc.)
-suppress-plugin-messages: false
+# Eaglercraft 1.5.2 format (via EaglerXRewind)
+eaglercraft-1.5.2-format: "&e[Eaglercraft 1.5.2] &a%player_name%&f: %message%"
 
-# Permissions
-permissions:
-  send: platformchat.send
-  reload: platformchat.reload
+# Eaglercraft 1.8 format (via regular EaglerX)
+eaglercraft-1.8-format: "&e[Eaglercraft 1.8] &a%player_name%&f: %message%"
 
-# Debug mode
-debug: false
+# Eaglercraft 1.12.2 format (via regular EaglerX)
+eaglercraft-1.12.2-format: "&e[Eaglercraft 1.12.2] &a%player_name%&f: %message%"
 
+# Generic Eaglercraft format (for unknown versions)
+eaglercraft-format: "&e[Eaglercraft] &a%player_name%&f: %message%"
