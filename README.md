@@ -2,6 +2,14 @@
 
 PlatformChat is a simple Minecraft Bukkit/Spigot plugin that provides enhanced chat formatting with support for Bedrock players (via Floodgate) and PlaceholderAPI integration. It allows configurable chat prefixes and color-coded messages for both Java and Bedrock editions.
 
+## Demo
+
+### Java Edition
+![Demo on Java Edition](Demo_Java.PNG)
+
+### Bedrock Edition (iOS)
+![Demo on iOS Bedrock Edition](Demo_iOS.PNG)
+
 ---
 
 ## Features
